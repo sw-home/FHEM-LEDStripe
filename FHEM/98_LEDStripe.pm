@@ -442,7 +442,8 @@ sub LEDStripe_postrequest
                 <br />Control LED power on/off using s switch channel</li>
   </ul>
 
-  <h4>Commands</h4>
+  <a name="LEDStripe_set"></a>
+  <b>Set</b>
   <ul>
     <li><a name="on"><code>set &lt;name&gt; on</code></a>
                 <br />Start 'playing' the file with LED color information</li>
