@@ -37,7 +37,7 @@ sub LEDStripe_Initialize($)
   $hash->{SetFn}     = "LEDStripe_Set";
   $hash->{DefFn}     = "LEDStripe_Define";
   $hash->{GetFn}     = "LEDStripe_Get";
-  $hash->{AttrList}  = "remote_ip remote_port playfile playtimer power_switch";
+  $hash->{AttrList}  = "remote_ip remote_port playfile playtimer power_switch repeat";
 }
 
 ###################################
@@ -258,7 +258,6 @@ sub LEDStripe_Timer
     }
 
     if ($count == $playindex) {
-      LEDStripe_postrequest($hash,$URL,$firstline);
       $playindex = 2;
     } else {
       $playindex++;
@@ -266,9 +265,17 @@ sub LEDStripe_Timer
 
   } else {
     if (!($firstline = <$fh>)) {
-      seek ($fh,0,SEEK_SET);
-      $firstline = <$fh>;
-      $playindex=2;
+      if (AttrVal($hash->{NAME}, "repeat", 0) == 1) {
+        seek ($fh,0,SEEK_SET);
+        $firstline = <$fh>;
+        $playindex=2;
+      } else {
+        LEDStripe_closeplayfile();
+        if ($hash->{STATE} eq "off") {
+          LEDStripe_power("off");
+        }
+        return;
+      }
     } else {
       $playindex++;
     }
@@ -290,7 +297,9 @@ sub LEDStripe_power
     my $currentpower = Value($switch);
     if($command ne $currentpower) {
       fhem "set $switch $command";
-      select(undef, undef, undef, 0.5);
+      if ($command eq "on") {
+        select(undef, undef, undef, 1.5);
+      }
     }
   }
 }
@@ -440,6 +449,8 @@ sub LEDStripe_postrequest
                 <br />Show a color picker and color buttons (the colors are just examples, any combinations are possible)./li>
     <li><a name="power_switch"><code>attr &lt;name&gt; power_switch &lt;integer&gt;</code></a>
                 <br />Control LED power on/off using s switch channel</li>
+    <li><a name="repeat"><code>attr &lt;name&gt; repeat &lt;integer&gt;</code></a>
+                <br />Set to 1 to repeat the play file animation until the device is set to off</li>
   </ul>
 
   <a name="LEDStripe_set"></a>
