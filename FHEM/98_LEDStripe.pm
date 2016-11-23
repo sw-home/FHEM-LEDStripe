@@ -272,7 +272,7 @@ sub LEDStripe_Timer
       } else {
         LEDStripe_closeplayfile();
         if ($hash->{STATE} eq "off") {
-          LEDStripe_power("off");
+          LEDStripe_power($hash, "off");
         }
         return;
       }
