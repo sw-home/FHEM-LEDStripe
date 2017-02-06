@@ -3,7 +3,7 @@
 
 # $Id: $
 
-        Version 0.1
+        Version 0.2
 
 =head1 SYNOPSIS
         FHEM Module and firmware for controlling WS2812b LED stripes
@@ -51,7 +51,7 @@ sub LEDStripe_Set($@)
   my $URL = "http://" . $remote_ip . (defined $remote_port?":".$remote_port:"");
 
   return "no set value specified" if(int(@a) < 2);
-  return "on off pixel range pixels fire rainbow rgb:colorpicker,RGB" if($a[1] eq "?");
+  return "on off play pixel range pixels fire rainbow rgb:colorpicker,RGB" if($a[1] eq "?");
 
   shift @a;
   my $command = shift @a;
@@ -60,11 +60,17 @@ sub LEDStripe_Set($@)
 
   if($command eq "on")
   {
+    return "mode is not set" if (!defined($hash->{mode}));
+    $command = $hash->{mode};
+  }
+  if($command eq "play")
+  {
     my $playfile = AttrVal($hash->{NAME}, "playfile", undef);
     Log 4, "command on, file: " . $playfile;
     return "playfile attribute is not set" if (!defined($playfile));
-    LEDStripe_power($hash,$command);
+    LEDStripe_power($hash,"on");
     $URL .= "/off";
+    $hash->{mode} = $command;
     LEDStripe_request($hash,$URL);
     undef $hash->{playindex};
     LEDStripe_Timer($hash);
@@ -81,6 +87,7 @@ sub LEDStripe_Set($@)
     LEDStripe_closeplayfile($hash);
     LEDStripe_power($hash,"on");
     $URL .= "/fire";
+    $hash->{mode} = $command;
     LEDStripe_request($hash,$URL);
   }
   if($command eq "rainbow")
@@ -88,6 +95,7 @@ sub LEDStripe_Set($@)
     LEDStripe_closeplayfile($hash);
     LEDStripe_power($hash,"on");
     $URL .= "/rainbow";
+    $hash->{mode} = $command;
     LEDStripe_request($hash,$URL);
   }
   if($command eq "pixel")
@@ -114,6 +122,7 @@ sub LEDStripe_Set($@)
 
     Log 4, "set command: " . $command ." desired:". $desired_led;
     $URL .= "/rgb/" . $desired_led . "/" . $red . "," . $green . "," . $blue;
+    $hash->{mode} = $command;
     LEDStripe_request($hash,$URL);
   }
   if($command eq "range")
@@ -144,20 +153,25 @@ sub LEDStripe_Set($@)
 
     Log 4, "set command: " . $command ." desired:". $first_led . " to " . $last_led;
     $URL .= "/range/" . $first_led . "," . $last_led . "/" . $red . "," . $green . "," . $blue;
+    $hash->{mode} = $command;
     LEDStripe_request($hash,$URL);
   }
   if($command eq "rgb")
   {
-    return "Set rgb needs a color parameter: <red><green><blue> e.g. ffaa00" if ( @a != 1 || length($a[0]) != 6);
-    my $red=oct("0x".substr($a[0],0,2));
-    my $green=oct("0x".substr($a[0],2,2));
-    my $blue=oct("0x".substr($a[0],4,2));
+    my $rgbval;
+    $rgbval = $hash->{READINGS}{rgb}{VAL} if defined($hash->{READINGS}{rgb}{VAL});
+    $rgbval = $a[0] if ( @a == 1 && length($a[0]) == 6);
+    return "Set rgb needs a color parameter: <red><green><blue> e.g. ffaa00" if !defined($rgbval);
+    my $red=oct("0x".substr($rgbval,0,2));
+    my $green=oct("0x".substr($rgbval,2,2));
+    my $blue=oct("0x".substr($rgbval,4,2));
     my $last_led=$hash->{READINGS}{led_count}{VAL} - 1;
     LEDStripe_closeplayfile($hash);
     LEDStripe_power($hash,"on");
     $URL .= "/range/0,$last_led/$red,$green,$blue";
+    $hash->{mode} = $command;
     LEDStripe_request($hash,$URL);
-    readingsSingleUpdate($hash, "rgb", $a[0], 1);
+    readingsSingleUpdate($hash, "rgb", $rgbval, 1);
   }
   if($command eq "pixels")
   {
@@ -167,6 +181,7 @@ sub LEDStripe_Set($@)
     LEDStripe_power($hash,"on");
     Log 4, "set command: " . $command ." with data:". $pixels;
     $URL .= "/leds/";
+    $hash->{mode} = $command;
     LEDStripe_postrequest($hash,$URL,$pixels);
   }
   return undef;
@@ -240,7 +255,9 @@ sub LEDStripe_Timer
   my $count=1;
   my $firstline;
 
+  Log 4, "$name entering timer with index $playindex";
   if (!defined($fh)) {
+    Log 4, "$name timer opening file";
     if (!open($fh, '<:encoding(UTF-8)', $playfile)) {
       Log 1, "Could not open file $playfile";
       return;
@@ -265,14 +282,18 @@ sub LEDStripe_Timer
 
   } else {
     if (!($firstline = <$fh>)) {
+      Log 4, "$name file end reached";
       if (AttrVal($hash->{NAME}, "repeat", 0) == 1) {
+        Log 4, "$name resuming file";
         seek ($fh,0,SEEK_SET);
         $firstline = <$fh>;
         $playindex=2;
       } else {
+        Log 4, "$name stopping play";
+        undef $hash->{playindex};
         LEDStripe_closeplayfile();
         if ($hash->{STATE} eq "off") {
-          LEDStripe_power($hash, "off");
+          LEDStripe_power($hash,"off");
         }
         return;
       }
@@ -308,10 +329,10 @@ sub LEDStripe_power
 sub LEDStripe_closeplayfile
 {
   my ($hash) = @_;
-  RemoveInternalTimer($hash) if $hash->{playindex};
+  RemoveInternalTimer($hash);
   if (defined($hash->{filehash})) {
     close ($hash->{filehash});
-    $hash->{filehash} = undef;
+    undef ($hash->{filehash});
   }
 }
 
@@ -449,17 +470,17 @@ sub LEDStripe_postrequest
                 <br />Show a color picker and color buttons (the colors are just examples, any combinations are possible)./li>
     <li><a name="power_switch"><code>attr &lt;name&gt; power_switch &lt;integer&gt;</code></a>
                 <br />Control LED power on/off using s switch channel</li>
-    <li><a name="repeat"><code>attr &lt;name&gt; repeat &lt;integer&gt;</code></a>
-                <br />Set to 1 to repeat the play file animation until the device is set to off</li>
   </ul>
 
   <a name="LEDStripe_set"></a>
   <b>Set</b>
   <ul>
     <li><a name="on"><code>set &lt;name&gt; on</code></a>
-                <br />Start 'playing' the file with LED color information</li>
+                <br />Resume last LED setting or effect/li>
     <li><a name="off"><code>set &lt;name&gt; off</code></a>
                 <br />Switch all LEDs off and stop any effects</li>
+    <li><a name="play"><code>set &lt;name&gt; play</code></a>
+                <br />Start 'playing' the file with LED color information</li>
     <li><a name="pixel"><code>set &lt;name&gt; pixel &lt;led id&gt; &lt;red&gt; &lt;green&gt; &lt;blue&gt;</code></a>
                 <br />Set the color of a single LED, index starts at 0, color values are from 0-255</li>
     <li><a name="range"><code>set &lt;name&gt; range &lt;start id&gt; &lt;end id&gt; &lt;red&gt; &lt;green&gt; &lt;blue&gt;</code></a>
