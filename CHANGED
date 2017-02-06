@@ -1,0 +1,17 @@
+Feb 06, 2017
+
+    Changed command "on" to restore the last mode of operation
+    Added new command "play" to start the file player
+
+Nov 23, 2016
+
+    added attribute repeat to keep playing the play files
+
+Oct 25, 2016
+
+    Fixed switching from special effect to normal light
+    Added rgb reading to display color picker in the last picked color
+
+Oct 24, 2016
+
+    First commit
