@@ -51,7 +51,7 @@ sub LEDStripe_Set($@)
   my $URL = "http://" . $remote_ip . (defined $remote_port?":".$remote_port:"");
 
   return "no set value specified" if(int(@a) < 2);
-  return "on off play pixel range pixels fire rainbow rgb:colorpicker,RGB" if($a[1] eq "?");
+  return "on off play pixel range pixels fire rainbow sparks white_sparks rgb:colorpicker,RGB" if($a[1] eq "?");
 
   shift @a;
   my $command = shift @a;
