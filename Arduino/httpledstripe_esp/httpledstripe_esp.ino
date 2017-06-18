@@ -27,10 +27,13 @@ boolean rainbow=false;
 boolean blinker=false;
 boolean sparks=false;
 boolean white_sparks=false;
+boolean knightrider = false;
 uint16_t rainbowColor=0;
 
 
 uint16_t delay_interval=50;
+
+int cur_step=0;
 
 // setup network and output pins
 void setup() {
@@ -199,6 +202,7 @@ void loop() {
             rainbow = false;
             sparks = false;
             white_sparks = false;
+            knightrider = false;
             stripe_setBrightness(128);
             isGet = true;
           }
@@ -208,6 +212,7 @@ void loop() {
             fire = false;
             sparks = false;
             white_sparks = false;
+            knightrider = false;
             stripe_setBrightness(128);
             isGet = true;
           }
@@ -217,6 +222,7 @@ void loop() {
             fire = false;
             sparks = false;
             white_sparks = true;
+            knightrider = false;
             stripe_setBrightness(128);
             isGet = true;
           }
@@ -226,6 +232,17 @@ void loop() {
             fire = false;
             sparks = true;
             white_sparks = false;
+            knightrider = false;
+            stripe_setBrightness(128);
+            isGet = true;
+          }
+          // SET KNIGHTRIDER EFFECT
+          if (inputLine.length() > 3 && inputLine.substring(0,16) == F("GET /knightrider")) {
+            rainbow = false;
+            fire = false;
+            sparks = false;
+            white_sparks = false;
+            knightrider = true;
             stripe_setBrightness(128);
             isGet = true;
           }
@@ -283,6 +300,7 @@ void loop() {
   if (blinker) blinkerEffect();
   if (sparks) sparksEffect();
   if (white_sparks) white_sparksEffect();
+  if (knightrider) knightriderEffect();
 }
 
 // Reset stripe, all LED off and no effects
@@ -297,6 +315,7 @@ void reset() {
   blinker = false;
   sparks = false;
   white_sparks = false;
+  knightrider = false;
 }
 
 // LED flicker fire effect
@@ -367,6 +386,43 @@ void white_sparksEffect() {
     stripe_dimPixel(i);
   }
 
+  stripe_show();
+  delay(delay_interval);
+}
+
+void knightriderEffect() {
+  uint16_t i;
+  
+  cur_step+=1;
+  
+  if(cur_step>=((NUMPIXELS1+NUMPIXELS2)*2)){
+    cur_step=0;
+  }
+  
+
+  if(cur_step<(NUMPIXELS1+NUMPIXELS2)){
+    stripe_setPixelColor(cur_step, (256*256*256)-1);
+    for(i=1;i<=32;i++){
+      if((cur_step-i>-1)) {
+        stripe_dimPixel(cur_step-i);
+      }
+      if((cur_step+i-1)<NUMPIXELS1+NUMPIXELS2) {
+        stripe_dimPixel(cur_step+i-1);
+      }
+          
+    }
+  } else {
+    stripe_setPixelColor((NUMPIXELS1+NUMPIXELS2)*2-cur_step-1, (256*256*256)-1);
+    for(i=1;i<=32;i++){
+      if(((NUMPIXELS1+NUMPIXELS2)*2-cur_step-1+i<NUMPIXELS1+NUMPIXELS2)) {
+        stripe_dimPixel((NUMPIXELS1+NUMPIXELS2)*2-cur_step-1+i);
+      }
+      if(((NUMPIXELS1+NUMPIXELS2)*2-cur_step-1-i)>-1) {
+        stripe_dimPixel((NUMPIXELS1+NUMPIXELS2)*2-cur_step-1-i);
+      }
+    }
+  } 
+  
   stripe_show();
   delay(delay_interval);
 }

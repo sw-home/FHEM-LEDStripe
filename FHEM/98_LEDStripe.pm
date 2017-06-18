@@ -51,7 +51,7 @@ sub LEDStripe_Set($@)
   my $URL = "http://" . $remote_ip . (defined $remote_port?":".$remote_port:"");
 
   return "no set value specified" if(int(@a) < 2);
-  return "on off play pixel range pixels fire rainbow sparks white_sparks delay brightness rgb:colorpicker,RGB" if($a[1] eq "?");
+  return "on off play pixel range pixels fire rainbow knightrider sparks white_sparks delay brightness rgb:colorpicker,RGB" if($a[1] eq "?");
 
   shift @a;
   my $command = shift @a;
@@ -95,6 +95,14 @@ sub LEDStripe_Set($@)
     LEDStripe_closeplayfile($hash);
     LEDStripe_power($hash,"on");
     $URL .= "/rainbow";
+    $hash->{mode} = $command;
+    LEDStripe_request($hash,$URL);
+  }
+  if($command eq "knightrider")
+  {
+    LEDStripe_closeplayfile($hash);
+    LEDStripe_power($hash,"on");
+    $URL .= "/knightrider";
     $hash->{mode} = $command;
     LEDStripe_request($hash,$URL);
   }
@@ -534,6 +542,8 @@ sub LEDStripe_postrequest
                 <br />Start sparkling dots (random color) light effect on all LEDs</li>
     <li><a name="white_sparks"><code>set &lt;name&gt; white_sparks &lt;string&gt;</code></a>
                 <br />Start sparkling dots (white) light effect on all LEDs</li>
+    <li><a name="knightrider"><code>set &lt;name&gt; knightrider &lt;string&gt;</code></a>
+                <br />Start knightrider light effect on all LEDs</li>
   </ul>
 
 </ul>
