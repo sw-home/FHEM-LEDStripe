@@ -98,6 +98,22 @@ sub LEDStripe_Set($@)
     $hash->{mode} = $command;
     LEDStripe_request($hash,$URL);
   }
+  if($command eq "sparks")
+  {
+    LEDStripe_closeplayfile($hash);
+    LEDStripe_power($hash,"on");
+    $URL .= "/sparks";
+    $hash->{mode} = $command;
+    LEDStripe_request($hash,$URL);
+  }
+  if($command eq "white_sparks")
+  {
+    LEDStripe_closeplayfile($hash);
+    LEDStripe_power($hash,"on");
+    $URL .= "/white_sparks";
+    $hash->{mode} = $command;
+    LEDStripe_request($hash,$URL);
+  }
   if($command eq "pixel")
   {
     return "Set pixel needs four parameters: <desired_led> <red> <green> <blue>" if ( @a != 4 );
@@ -492,6 +508,10 @@ sub LEDStripe_postrequest
                 <br />Start a 'fire' light effect on all LEDs</li>
     <li><a name="rainbow"><code>set &lt;name&gt; rainbow &lt;string&gt;</code></a>
                 <br />Start a 'rainbow color chase' light effect on all LEDs</li>
+    <li><a name="sparks"><code>set &lt;name&gt; sparks &lt;string&gt;</code></a>
+                <br />Start sparkling dots (random color) light effect on all LEDs</li>
+    <li><a name="white_sparks"><code>set &lt;name&gt; white_sparks &lt;string&gt;</code></a>
+                <br />Start sparkling dots (white) light effect on all LEDs</li>
   </ul>
 
 </ul>

@@ -25,6 +25,8 @@ void reset();
 boolean fire=false;
 boolean rainbow=false;
 boolean blinker=false;
+boolean sparks=false;
+boolean white_sparks=false;
 uint16_t rainbowColor=0;
 
 
@@ -183,6 +185,8 @@ void loop() {
           if (inputLine.length() > 3 && inputLine.substring(0,9) == F("GET /fire")) {
             fire = true;
             rainbow = false;
+            sparks = false;
+            white_sparks = false;
             stripe_setBrightness(128);
             isGet = true;
           }
@@ -190,6 +194,26 @@ void loop() {
           if (inputLine.length() > 3 && inputLine.substring(0,12) == F("GET /rainbow")) {
             rainbow = true;
             fire = false;
+            sparks = false;
+            white_sparks = false;
+            stripe_setBrightness(128);
+            isGet = true;
+          }
+          // SET WHITE_SPARKS EFFECT
+          if (inputLine.length() > 3 && inputLine.substring(0,17) == F("GET /white_sparks")) {
+            rainbow = false;
+            fire = false;
+            sparks = false;
+            white_sparks = true;
+            stripe_setBrightness(128);
+            isGet = true;
+          }
+          // SET SPARKS EFFECT
+          if (inputLine.length() > 3 && inputLine.substring(0,11) == F("GET /sparks")) {
+            rainbow = false;
+            fire = false;
+            sparks = true;
+            white_sparks = false;
             stripe_setBrightness(128);
             isGet = true;
           }
@@ -197,6 +221,8 @@ void loop() {
           if (inputLine.length() > 3 && inputLine.substring(0,9) == F("GET /nofx")) {
             rainbow = false;
             fire = false;
+            sparks = false;
+            white_sparks = false;
             blinker = false;
             isGet = true;
           }
@@ -221,6 +247,7 @@ void loop() {
             blinker = true;
             rainbow = false;
             fire = false;
+            sparks = false;
            
             isGet = true;
           }
@@ -242,6 +269,8 @@ void loop() {
   if (fire) fireEffect();
   if (rainbow) rainbowCycle();
   if (blinker) blinkerEffect();
+  if (sparks) sparksEffect();
+  if (white_sparks) white_sparksEffect();
 }
 
 // Reset stripe, all LED off and no effects
@@ -254,6 +283,8 @@ void reset() {
   fire = false;
   rainbow = false;
   blinker = false;
+  sparks = false;
+  white_sparks = false;
 }
 
 // LED flicker fire effect
@@ -295,6 +326,37 @@ void blinkerEffect() {
   }
   stripe_show();
 delay(myOff);
+}
+
+void sparksEffect() {
+  uint16_t i = random(NUMPIXELS1+NUMPIXELS2);
+
+  if (stripe_getPixelColor(i)==0) {
+    stripe_setPixelColor(i,random(256*256*256));
+  }
+
+  for(i = 0; i < NUMPIXELS1+NUMPIXELS2; i++) {
+    stripe_dimPixel(i);
+  }
+
+  stripe_show();
+  delay(50);
+}
+
+void white_sparksEffect() {
+  uint16_t i = random(NUMPIXELS1+NUMPIXELS2);
+  uint16_t rand = random(256);
+
+  if (stripe_getPixelColor(i)==0) {
+    stripe_setPixelColor(i,rand*256*256+rand*256+rand);
+  }
+
+  for(i = 0; i < NUMPIXELS1+NUMPIXELS2; i++) {
+    stripe_dimPixel(i);
+  }
+
+  stripe_show();
+  delay(50);
 }
 
 // Input a value 0 to 255 to get a color value.
