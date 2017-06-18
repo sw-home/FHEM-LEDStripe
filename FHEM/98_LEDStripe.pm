@@ -27,7 +27,7 @@ use Switch;
 use Color;
 require 'HttpUtils.pm';
 
-my @gets = ('led_count','leds_on','rgb');
+my @gets = ('led_count','leds_on','rgb','delay','brightness');
 
 ##############################################
 sub LEDStripe_Initialize($)
@@ -51,7 +51,7 @@ sub LEDStripe_Set($@)
   my $URL = "http://" . $remote_ip . (defined $remote_port?":".$remote_port:"");
 
   return "no set value specified" if(int(@a) < 2);
-  return "on off play pixel range pixels fire rainbow sparks white_sparks rgb:colorpicker,RGB" if($a[1] eq "?");
+  return "on off play pixel range pixels fire rainbow sparks white_sparks delay brightness rgb:colorpicker,RGB" if($a[1] eq "?");
 
   shift @a;
   my $command = shift @a;
@@ -188,6 +188,28 @@ sub LEDStripe_Set($@)
     $hash->{mode} = $command;
     LEDStripe_request($hash,$URL);
     readingsSingleUpdate($hash, "rgb", $rgbval, 1);
+  }
+  if($command eq "delay")
+  {
+    my $delayval;
+    $delayval = $hash->{READINGS}{delay}{VAL} if defined($hash->{READINGS}{delay}{VAL});
+    $delayval = $a[0] if ( @a == 1 );
+    return "Set delay needs a value parameter: <milliseconds> e.g. 50" if !defined($delayval);
+    $URL .= "/delay/$delayval";
+    $hash->{mode} = $command;
+    LEDStripe_request($hash,$URL);
+    readingsSingleUpdate($hash, "delay", $delayval, 1);
+  }
+  if($command eq "brightness")
+  {
+    my $brightnessval;
+    $brightnessval = $hash->{READINGS}{brightness}{VAL} if defined($hash->{READINGS}{brightness}{VAL});
+    $brightnessval = $a[0] if ( @a == 1 );
+    return "Set brightness needs a value (0-255) parameter: <brightness> e.g. 128" if !defined($brightnessval);
+    $URL .= "/brightness/$brightnessval";
+    $hash->{mode} = $command;
+    LEDStripe_request($hash,$URL);
+    readingsSingleUpdate($hash, "brightness", $brightnessval, 1);
   }
   if($command eq "pixels")
   {

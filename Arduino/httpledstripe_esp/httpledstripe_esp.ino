@@ -30,6 +30,7 @@ boolean white_sparks=false;
 uint16_t rainbowColor=0;
 
 
+uint16_t delay_interval=50;
 
 // setup network and output pins
 void setup() {
@@ -130,7 +131,7 @@ void loop() {
           currentLineIsBlank = true;
           Serial.println(inputLine);
          
-// SET SINGLE PIXEL url should be GET /rgb/n/rrr,ggg,bbb
+          // SET SINGLE PIXEL url should be GET /rgb/n/rrr,ggg,bbb
           if (inputLine.length() > 3 && inputLine.substring(0,9) == F("GET /rgb/")) {
             int slash = inputLine.indexOf('/', 9 );
             ledix = inputLine.substring(9,slash).toInt();
@@ -142,6 +143,17 @@ void loop() {
             greenLevel = getParam.substring(komma1+1,komma2).toInt();
             blueLevel = getParam.substring(komma2+1).toInt();
             stripe_setPixelColor(ledix, stripe_color(redLevel,greenLevel,blueLevel));
+            stripe_show();
+            isGet = true;
+          }
+          // SET DELAY url should be GET /delay/n
+          if (inputLine.length() > 3 && inputLine.substring(0,11) == F("GET /delay/")) {
+            delay_interval = inputLine.substring(11).toInt();
+            isGet = true;
+          }
+          // SET BRIGHTNESS url should be GET /brightness/n
+          if (inputLine.length() > 3 && inputLine.substring(0,16) == F("GET /brightness/")) {
+            stripe_setBrightness(inputLine.substring(16).toInt());
             stripe_show();
             isGet = true;
           }
@@ -312,7 +324,7 @@ void rainbowCycle() {
     stripe_setPixelColor(i, Wheel(((i * 256 / stripe_numPixels()) + rainbowColor) & 255));
   }
   stripe_show();
-  delay(20);
+  delay(delay_interval);
 }
 
 void blinkerEffect() {
@@ -340,7 +352,7 @@ void sparksEffect() {
   }
 
   stripe_show();
-  delay(50);
+  delay(delay_interval);
 }
 
 void white_sparksEffect() {
@@ -356,7 +368,7 @@ void white_sparksEffect() {
   }
 
   stripe_show();
-  delay(50);
+  delay(delay_interval);
 }
 
 // Input a value 0 to 255 to get a color value.
