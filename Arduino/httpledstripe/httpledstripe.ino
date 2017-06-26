@@ -3,36 +3,53 @@
  by Stefan Willmeroth
 */
 
-#include <SPI.h>
-#include <EEPROM.h>
-#include <Ethernet.h>
-//#include <UIPEthernet.h>
-#include <Adafruit_NeoPixel.h>
-#include <avr/wdt.h>
+#define BOARD_ARDUINO
+//#define BOARD_ESP
 
-// Which pin on the Arduino is connected to the NeoPixels?
-#define LEDPIN1           6
-#define LEDPIN2           7
+
+#if defined(BOARD_ARDUINO)
+  #include <SPI.h>
+  #include <EEPROM.h>
+  #include <Ethernet.h>
+  //#include <UIPEthernet.h>
+  #include <avr/wdt.h>
+#elif defined(BOARD_ESP)
+  #include <ESP8266WiFi.h>
+#endif
+
+
+#include <Adafruit_NeoPixel.h>
+
+#if defined(BOARD_ARDUINO)
+  // Which pin on the Arduino is connected to the NeoPixels?
+  #define LEDPIN1           6
+  #define LEDPIN2           7
+  
+  // Enter a MAC address and IP address for your controller below
+  // uncomment if using fixed IP:
+  //byte mac[] = { 0x90, 0x42, 0xDA, 0x0D, 0x5D, 0x99 };
+
+  // The IP address will be dependent on your local network 
+  // uncomment if using fixed IP:
+  //IPAddress ip(10,222,11,42);
+
+  // Initialize the Ethernet server library
+  // with the IP address and port you want to use
+  // (port 80 is default for HTTP):
+  EthernetServer server(80);
+#elif defined(BOARD_ESP)
+  #define LEDPIN1           14
+  #define LEDPIN2           12
+  
+  const char* ssid     = "XXX";
+  const char* password = "XXX";
+  WiFiServer server(80);
+#endif
 
 // How many NeoPixels are attached to the Arduino?
 #define NUMPIXELS1     150
 #define NUMPIXELS2     150
 
-//#define NUMPIXELS1     20
-//#define NUMPIXELS2     20
-
-// Enter a MAC address and IP address for your controller below
-// uncomment if using fixed IP:
-//byte mac[] = { 0x90, 0x42, 0xDA, 0x0D, 0x5D, 0x99 };
-
-// The IP address will be dependent on your local network 
-// uncomment if using fixed IP:
-//IPAddress ip(10,222,11,42);
-
-// Initialize the Ethernet server library
-// with the IP address and port you want to use
-// (port 80 is default for HTTP):
-EthernetServer server(80);
 
 // control special effects
 boolean fire=false;
@@ -51,24 +68,49 @@ void setup() {
   // Initialize all pixels to 'off'
   stripe_setup();
   
-  // start the Ethernet connection and the server:
-  // for stored ip, comment out for fixed ip:
-  ifconfig_begin(); 
+  #if defined(BOARD_ARDUINO)
   
-  // uncomment if using fixed IP:
-  // Ethernet.begin(mac, ip);
-
-  server.begin();
-
-  Serial.print(F("HTTP LED stripe server is at "));
-  Serial.println(Ethernet.localIP());
+    // start the Ethernet connection and the server:
+    // for stored ip, comment out for fixed ip:
+    ifconfig_begin();
+    // uncomment if using fixed IP:
+    // Ethernet.begin(mac, ip);
+    
+    server.begin();
+    Serial.print(F("HTTP LED stripe server is at "));
+    Serial.println(Ethernet.localIP());
+    
+  #elif defined(BOARD_ESP)
+  
+    WiFi.mode(WIFI_STA);
+    Serial.println();
+    Serial.println();
+    Serial.print("Connecting to ");
+    Serial.println(ssid);
+    WiFi.begin(ssid, password);
+   
+    while (WiFi.status() != WL_CONNECTED) {
+      delay(500);
+      Serial.print(".");
+    }
+    
+    server.begin();
+    Serial.print(F("HTTP LED stripe server is at "));
+    Serial.println(WiFi.localIP());
+    
+  #endif
 
 }
 
 // request receive loop
 void loop() {
   // listen for incoming clients
-  EthernetClient client = server.available();
+  #if defined(BOARD_ARDUINO)
+    EthernetClient client = server.available();
+  #elif defined(BOARD_ESP)
+    WiFiClient client = server.available();
+  #endif
+  
   if (client) {
     Serial.println(F("new client"));
     
@@ -280,7 +322,11 @@ int colorVal(char c) {
   return i*i + i*2;
 }
 
+#if defined(BOARD_ARDUINO)
 void sendOkResponse(EthernetClient client) {
+#elif defined(BOARD_ESP)
+void sendOkResponse(WiFiClient client) {
+#endif
   client.println(F("HTTP/1.1 200 OK"));
   client.println(F("Content-Type: text/html"));
   client.println(F("Connection: close"));  // the connection will be closed after completion of the response

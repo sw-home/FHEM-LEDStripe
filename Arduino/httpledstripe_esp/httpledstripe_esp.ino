@@ -25,9 +25,15 @@ void reset();
 boolean fire=false;
 boolean rainbow=false;
 boolean blinker=false;
+boolean sparks=false;
+boolean white_sparks=false;
+boolean knightrider = false;
 uint16_t rainbowColor=0;
 
 
+uint16_t delay_interval=50;
+
+int cur_step=0;
 
 // setup network and output pins
 void setup() {
@@ -128,7 +134,7 @@ void loop() {
           currentLineIsBlank = true;
           Serial.println(inputLine);
          
-// SET SINGLE PIXEL url should be GET /rgb/n/rrr,ggg,bbb
+          // SET SINGLE PIXEL url should be GET /rgb/n/rrr,ggg,bbb
           if (inputLine.length() > 3 && inputLine.substring(0,9) == F("GET /rgb/")) {
             int slash = inputLine.indexOf('/', 9 );
             ledix = inputLine.substring(9,slash).toInt();
@@ -140,6 +146,17 @@ void loop() {
             greenLevel = getParam.substring(komma1+1,komma2).toInt();
             blueLevel = getParam.substring(komma2+1).toInt();
             stripe_setPixelColor(ledix, stripe_color(redLevel,greenLevel,blueLevel));
+            stripe_show();
+            isGet = true;
+          }
+          // SET DELAY url should be GET /delay/n
+          if (inputLine.length() > 3 && inputLine.substring(0,11) == F("GET /delay/")) {
+            delay_interval = inputLine.substring(11).toInt();
+            isGet = true;
+          }
+          // SET BRIGHTNESS url should be GET /brightness/n
+          if (inputLine.length() > 3 && inputLine.substring(0,16) == F("GET /brightness/")) {
+            stripe_setBrightness(inputLine.substring(16).toInt());
             stripe_show();
             isGet = true;
           }
@@ -183,6 +200,9 @@ void loop() {
           if (inputLine.length() > 3 && inputLine.substring(0,9) == F("GET /fire")) {
             fire = true;
             rainbow = false;
+            sparks = false;
+            white_sparks = false;
+            knightrider = false;
             stripe_setBrightness(128);
             isGet = true;
           }
@@ -190,6 +210,39 @@ void loop() {
           if (inputLine.length() > 3 && inputLine.substring(0,12) == F("GET /rainbow")) {
             rainbow = true;
             fire = false;
+            sparks = false;
+            white_sparks = false;
+            knightrider = false;
+            stripe_setBrightness(128);
+            isGet = true;
+          }
+          // SET WHITE_SPARKS EFFECT
+          if (inputLine.length() > 3 && inputLine.substring(0,17) == F("GET /white_sparks")) {
+            rainbow = false;
+            fire = false;
+            sparks = false;
+            white_sparks = true;
+            knightrider = false;
+            stripe_setBrightness(128);
+            isGet = true;
+          }
+          // SET SPARKS EFFECT
+          if (inputLine.length() > 3 && inputLine.substring(0,11) == F("GET /sparks")) {
+            rainbow = false;
+            fire = false;
+            sparks = true;
+            white_sparks = false;
+            knightrider = false;
+            stripe_setBrightness(128);
+            isGet = true;
+          }
+          // SET KNIGHTRIDER EFFECT
+          if (inputLine.length() > 3 && inputLine.substring(0,16) == F("GET /knightrider")) {
+            rainbow = false;
+            fire = false;
+            sparks = false;
+            white_sparks = false;
+            knightrider = true;
             stripe_setBrightness(128);
             isGet = true;
           }
@@ -197,6 +250,8 @@ void loop() {
           if (inputLine.length() > 3 && inputLine.substring(0,9) == F("GET /nofx")) {
             rainbow = false;
             fire = false;
+            sparks = false;
+            white_sparks = false;
             blinker = false;
             isGet = true;
           }
@@ -221,6 +276,7 @@ void loop() {
             blinker = true;
             rainbow = false;
             fire = false;
+            sparks = false;
            
             isGet = true;
           }
@@ -242,6 +298,9 @@ void loop() {
   if (fire) fireEffect();
   if (rainbow) rainbowCycle();
   if (blinker) blinkerEffect();
+  if (sparks) sparksEffect();
+  if (white_sparks) white_sparksEffect();
+  if (knightrider) knightriderEffect();
 }
 
 // Reset stripe, all LED off and no effects
@@ -254,6 +313,9 @@ void reset() {
   fire = false;
   rainbow = false;
   blinker = false;
+  sparks = false;
+  white_sparks = false;
+  knightrider = false;
 }
 
 // LED flicker fire effect
@@ -281,7 +343,7 @@ void rainbowCycle() {
     stripe_setPixelColor(i, Wheel(((i * 256 / stripe_numPixels()) + rainbowColor) & 255));
   }
   stripe_show();
-  delay(20);
+  delay(delay_interval);
 }
 
 void blinkerEffect() {
@@ -295,6 +357,74 @@ void blinkerEffect() {
   }
   stripe_show();
 delay(myOff);
+}
+
+void sparksEffect() {
+  uint16_t i = random(NUMPIXELS1+NUMPIXELS2);
+
+  if (stripe_getPixelColor(i)==0) {
+    stripe_setPixelColor(i,random(256*256*256));
+  }
+
+  for(i = 0; i < NUMPIXELS1+NUMPIXELS2; i++) {
+    stripe_dimPixel(i);
+  }
+
+  stripe_show();
+  delay(delay_interval);
+}
+
+void white_sparksEffect() {
+  uint16_t i = random(NUMPIXELS1+NUMPIXELS2);
+  uint16_t rand = random(256);
+
+  if (stripe_getPixelColor(i)==0) {
+    stripe_setPixelColor(i,rand*256*256+rand*256+rand);
+  }
+
+  for(i = 0; i < NUMPIXELS1+NUMPIXELS2; i++) {
+    stripe_dimPixel(i);
+  }
+
+  stripe_show();
+  delay(delay_interval);
+}
+
+void knightriderEffect() {
+  uint16_t i;
+  
+  cur_step+=1;
+  
+  if(cur_step>=((NUMPIXELS1+NUMPIXELS2)*2)){
+    cur_step=0;
+  }
+  
+
+  if(cur_step<(NUMPIXELS1+NUMPIXELS2)){
+    stripe_setPixelColor(cur_step, (256*256*256)-1);
+    for(i=1;i<=32;i++){
+      if((cur_step-i>-1)) {
+        stripe_dimPixel(cur_step-i);
+      }
+      if((cur_step+i-1)<NUMPIXELS1+NUMPIXELS2) {
+        stripe_dimPixel(cur_step+i-1);
+      }
+          
+    }
+  } else {
+    stripe_setPixelColor((NUMPIXELS1+NUMPIXELS2)*2-cur_step-1, (256*256*256)-1);
+    for(i=1;i<=32;i++){
+      if(((NUMPIXELS1+NUMPIXELS2)*2-cur_step-1+i<NUMPIXELS1+NUMPIXELS2)) {
+        stripe_dimPixel((NUMPIXELS1+NUMPIXELS2)*2-cur_step-1+i);
+      }
+      if(((NUMPIXELS1+NUMPIXELS2)*2-cur_step-1-i)>-1) {
+        stripe_dimPixel((NUMPIXELS1+NUMPIXELS2)*2-cur_step-1-i);
+      }
+    }
+  } 
+  
+  stripe_show();
+  delay(delay_interval);
 }
 
 // Input a value 0 to 255 to get a color value.

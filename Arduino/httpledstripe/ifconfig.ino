@@ -1,3 +1,6 @@
+
+#if defined(BOARD_ARDUINO)
+
 #define NET_EEPROM_OFFSET 0
 #define NET_EEPROM_MAGIC 0x55
 
@@ -43,3 +46,4 @@ int ifconfig_checkMagic() {
   return EEPROM.read(NET_EEPROM_OFFSET) == NET_EEPROM_MAGIC;
 }
 
+#endif
