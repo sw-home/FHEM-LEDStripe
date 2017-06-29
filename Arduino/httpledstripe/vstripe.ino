@@ -28,6 +28,14 @@ void stripe_setPixelColor(uint16_t pixel, uint32_t color) {
   }
 }
 
+void stripe_dimPixel(uint16_t pixel) {
+  if(pixel < NUMPIXELS1) {
+    strip1.setPixelColor(NUMPIXELS1-1-pixel, DimColor(stripe_getPixelColor(pixel)));
+  } else {
+    strip2.setPixelColor(pixel-NUMPIXELS1, DimColor(stripe_getPixelColor(pixel)));
+  }
+}
+
 uint32_t stripe_getPixelColor(uint16_t pixel) {
   if(pixel < NUMPIXELS1) {
     return strip1.getPixelColor(NUMPIXELS1-1-pixel);
@@ -49,3 +57,25 @@ uint32_t stripe_color(uint8_t r, uint8_t g, uint8_t b) {
   return ((uint32_t)r << 16) | ((uint32_t)g <<  8) | b;
 }
 
+uint8_t Red(uint32_t color)
+{
+  return (color >> 16) & 0xFF;
+}
+
+// Returns the Green component of a 32-bit color
+uint8_t Green(uint32_t color)
+{
+  return (color >> 8) & 0xFF;
+}
+
+// Returns the Blue component of a 32-bit color
+uint8_t Blue(uint32_t color)
+{
+  return color & 0xFF;
+}
+
+uint32_t DimColor(uint32_t color)
+{
+  uint32_t dimColor = strip1.Color(Red(color) >> 1, Green(color) >> 1, Blue(color) >> 1);
+  return dimColor;
+}

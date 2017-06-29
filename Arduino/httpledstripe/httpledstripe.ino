@@ -10,8 +10,8 @@
 #if defined(BOARD_ARDUINO)
   #include <SPI.h>
   #include <EEPROM.h>
-  #include <Ethernet.h>
-  //#include <UIPEthernet.h>
+//  #include <Ethernet.h>
+  #include <UIPEthernet.h>
   #include <avr/wdt.h>
 #elif defined(BOARD_ESP)
   #include <ESP8266WiFi.h>
@@ -22,16 +22,16 @@
 
 #if defined(BOARD_ARDUINO)
   // Which pin on the Arduino is connected to the NeoPixels?
-  #define LEDPIN1           6
-  #define LEDPIN2           7
+  #define LEDPIN1           5
+  #define LEDPIN2           6
   
   // Enter a MAC address and IP address for your controller below
   // uncomment if using fixed IP:
-  //byte mac[] = { 0x90, 0x42, 0xDA, 0x0D, 0x5D, 0x99 };
+  byte mac[] = { 0x90, 0x42, 0xDA, 0x0D, 0x5D, 0x99 };
 
   // The IP address will be dependent on your local network 
   // uncomment if using fixed IP:
-  //IPAddress ip(10,222,11,42);
+  IPAddress ip(10,222,11,30);
 
   // Initialize the Ethernet server library
   // with the IP address and port you want to use
@@ -47,14 +47,33 @@
 #endif
 
 // How many NeoPixels are attached to the Arduino?
-#define NUMPIXELS1     150
-#define NUMPIXELS2     150
+#define NUMPIXELS1     0
+#define NUMPIXELS2     10
 
+
+int xfrom;
+int yto;
+int myredLevel;
+int mygreenLevel;
+int myblueLevel;
+int myOn;
+int myOff;
+
+
+void reset();
 
 // control special effects
 boolean fire=false;
 boolean rainbow=false;
+boolean blinker=false;
+boolean sparks=false;
+boolean white_sparks=false;
+boolean knightrider = false;
 uint16_t rainbowColor=0;
+
+uint16_t delay_interval=50;
+
+int cur_step=0;
 
 // setup network and output pins
 void setup() {
@@ -72,9 +91,9 @@ void setup() {
   
     // start the Ethernet connection and the server:
     // for stored ip, comment out for fixed ip:
-    ifconfig_begin();
+    // ifconfig_begin();
     // uncomment if using fixed IP:
-    // Ethernet.begin(mac, ip);
+    Ethernet.begin(mac, ip);
     
     server.begin();
     Serial.print(F("HTTP LED stripe server is at "));
@@ -189,6 +208,17 @@ void loop() {
             stripe_show();
             isGet = true;
           } 
+          // SET DELAY url should be GET /delay/n
+          if (inputLine.length() > 3 && inputLine.substring(0,11) == F("GET /delay/")) {
+            delay_interval = inputLine.substring(11).toInt();
+            isGet = true;
+          }
+          // SET BRIGHTNESS url should be GET /brightness/n
+          if (inputLine.length() > 3 && inputLine.substring(0,16) == F("GET /brightness/")) {
+            stripe_setBrightness(inputLine.substring(16).toInt());
+            stripe_show();
+            isGet = true;
+          }
           // SET PIXEL RANGE url should be GET /range/x,y/rrr,ggg,bbb
           if (inputLine.length() > 3 && inputLine.substring(0,11) == F("GET /range/")) {
             int slash = inputLine.indexOf('/', 11 );
@@ -234,6 +264,9 @@ void loop() {
           if (inputLine.length() > 3 && inputLine.substring(0,9) == F("GET /fire")) {
             fire = true;
             rainbow = false;
+            sparks = false;
+            white_sparks = false;
+            knightrider = false;
             stripe_setBrightness(128);
             isGet = true;
           }
@@ -241,7 +274,74 @@ void loop() {
           if (inputLine.length() > 3 && inputLine.substring(0,12) == F("GET /rainbow")) {
             rainbow = true;
             fire = false;
+            sparks = false;
+            white_sparks = false;
+            knightrider = false;
             stripe_setBrightness(128);
+            isGet = true;
+          }
+          // SET WHITE_SPARKS EFFECT
+          if (inputLine.length() > 3 && inputLine.substring(0,17) == F("GET /white_sparks")) {
+            rainbow = false;
+            fire = false;
+            sparks = false;
+            white_sparks = true;
+            knightrider = false;
+            stripe_setBrightness(128);
+            isGet = true;
+          }
+          // SET SPARKS EFFECT
+          if (inputLine.length() > 3 && inputLine.substring(0,11) == F("GET /sparks")) {
+            rainbow = false;
+            fire = false;
+            sparks = true;
+            white_sparks = false;
+            knightrider = false;
+            stripe_setBrightness(128);
+            isGet = true;
+          }
+          // SET KNIGHTRIDER EFFECT
+          if (inputLine.length() > 3 && inputLine.substring(0,16) == F("GET /knightrider")) {
+            rainbow = false;
+            fire = false;
+            sparks = false;
+            white_sparks = false;
+            knightrider = true;
+            stripe_setBrightness(128);
+            isGet = true;
+          }
+          // SET no_effects
+          if (inputLine.length() > 3 && inputLine.substring(0,9) == F("GET /nofx")) {
+            rainbow = false;
+            fire = false;
+            sparks = false;
+            white_sparks = false;
+            blinker = false;
+            isGet = true;
+          }
+          if (inputLine.length() > 3 && inputLine.substring(0,11) == F("GET /blink/")) {
+            int slash = inputLine.indexOf('/', 11 );
+            int komma1 = inputLine.indexOf(',');
+            xfrom = inputLine.substring(11, komma1).toInt();
+            yto = inputLine.substring(komma1+1, slash).toInt();
+            int urlend = inputLine.indexOf(' ', 11 );
+            String getParam = inputLine.substring(slash+1,urlend+1);
+            komma1 = getParam.indexOf(',');
+            int komma2 = getParam.indexOf(',',komma1+1);
+            int komma3 = getParam.indexOf(',',komma2+1);
+            int komma4 = getParam.indexOf(',',komma3+1);
+            myredLevel = getParam.substring(0,komma1).toInt();
+            mygreenLevel = getParam.substring(komma1+1, komma2).toInt();
+            myblueLevel = getParam.substring(komma2+1, komma3).toInt();
+           
+            myOn = getParam.substring(komma3+1, komma4).toInt();
+            myOff = getParam.substring(komma4+1).toInt();
+
+            blinker = true;
+            rainbow = false;
+            fire = false;
+            sparks = false;
+           
             isGet = true;
           }
           inputLine = "";
@@ -261,6 +361,10 @@ void loop() {
   }
   if (fire) fireEffect();
   if (rainbow) rainbowCycle();
+  if (blinker) blinkerEffect();
+  if (sparks) sparksEffect();
+  if (white_sparks) white_sparksEffect();
+  if (knightrider) knightriderEffect();
 }
 
 // Reset stripe, all LED off and no effects
@@ -272,6 +376,10 @@ void reset() {
   stripe_show();
   fire = false;
   rainbow = false;
+  blinker = false;
+  sparks = false;
+  white_sparks = false;
+  knightrider = false;
 }
 
 // LED flicker fire effect
@@ -299,7 +407,88 @@ void rainbowCycle() {
     stripe_setPixelColor(i, Wheel(((i * 256 / stripe_numPixels()) + rainbowColor) & 255));
   }
   stripe_show();
-  delay(20);
+  delay(delay_interval);
+}
+
+void blinkerEffect() {
+ for(int i=xfrom; i<=yto; i++) {
+    stripe_setPixelColor(i, stripe_color(myredLevel,mygreenLevel,myblueLevel));
+  }
+  stripe_show();
+ delay(myOn);
+ for(int i=xfrom; i<= yto; i++) {
+    stripe_setPixelColor(i, stripe_color(0,0,0));
+  }
+  stripe_show();
+delay(myOff);
+}
+
+void sparksEffect() {
+  uint16_t i = random(NUMPIXELS1+NUMPIXELS2);
+
+  if (stripe_getPixelColor(i)==0) {
+    stripe_setPixelColor(i,random(256*256*256));
+  }
+
+  for(i = 0; i < NUMPIXELS1+NUMPIXELS2; i++) {
+    stripe_dimPixel(i);
+  }
+
+  stripe_show();
+  delay(delay_interval);
+}
+
+void white_sparksEffect() {
+  uint16_t i = random(NUMPIXELS1+NUMPIXELS2);
+  uint16_t rand = random(256);
+
+  if (stripe_getPixelColor(i)==0) {
+    stripe_setPixelColor(i,rand*256*256+rand*256+rand);
+  }
+
+  for(i = 0; i < NUMPIXELS1+NUMPIXELS2; i++) {
+    stripe_dimPixel(i);
+  }
+
+  stripe_show();
+  delay(delay_interval);
+}
+
+void knightriderEffect() {
+  uint16_t i;
+  
+  cur_step+=1;
+  
+  if(cur_step>=((NUMPIXELS1+NUMPIXELS2)*2)){
+    cur_step=0;
+  }
+  
+
+  if(cur_step<(NUMPIXELS1+NUMPIXELS2)){
+    stripe_setPixelColor(cur_step, (256*256*256)-1);
+    for(i=1;i<=32;i++){
+      if((cur_step-i>-1)) {
+        stripe_dimPixel(cur_step-i);
+      }
+      if((cur_step+i-1)<NUMPIXELS1+NUMPIXELS2) {
+        stripe_dimPixel(cur_step+i-1);
+      }
+          
+    }
+  } else {
+    stripe_setPixelColor((NUMPIXELS1+NUMPIXELS2)*2-cur_step-1, (256*256*256)-1);
+    for(i=1;i<=32;i++){
+      if(((NUMPIXELS1+NUMPIXELS2)*2-cur_step-1+i<NUMPIXELS1+NUMPIXELS2)) {
+        stripe_dimPixel((NUMPIXELS1+NUMPIXELS2)*2-cur_step-1+i);
+      }
+      if(((NUMPIXELS1+NUMPIXELS2)*2-cur_step-1-i)>-1) {
+        stripe_dimPixel((NUMPIXELS1+NUMPIXELS2)*2-cur_step-1-i);
+      }
+    }
+  } 
+  
+  stripe_show();
+  delay(delay_interval);
 }
 
 // Input a value 0 to 255 to get a color value.
